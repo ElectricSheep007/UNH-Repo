@@ -104,23 +104,38 @@ the guest user's ID is always 0. Include in your output the name of the
 facility, the name of the member formatted as a single column, and the cost.
 Order by descending cost, and do not use any subqueries. */
 
-SELECT f.name, concat_ws( " ", m.firstname, m.surname) AS Member, Cost 
-CASE WHEN b.memid != 0 THEN  `membercost`*`slot`
-    WHEN b.memid = 0 THEN `guestcost`*`slot`
+SELECT f.name, concat_ws( " ", m.firstname, m.surname) AS Member,
+CASE WHEN b.memid != 0 THEN  f.membercost*b.slots
+    WHEN b.memid = 0 THEN f.guestcost* b.slots
     END AS Cost
 FROM `Bookings` AS b
 LEFT JOIN `Facilities` AS f
 ON b.facid = f.facid
 LEFT JOIN `Members` AS m
 ON b.memid = m.memid
-WHERE DATE(`starttime`) =  "2012-09-14" AND (`membercost`*`slots` >= 30 OR `guestcost`*`slots` >= 30)
-
-
+WHERE DATE(`starttime`) =  "2012-09-14" 
+HAVING Cost > 30
+ORDER BY Cost DESC 
 
 
 
 /* Q9: This time, produce the same result as in Q8, but using a subquery. */
 
+SELECT sub.* 
+FROM (
+        SELECT f.name, concat_ws( " ", m.firstname, m.surname) AS Member,
+            CASE WHEN b.memid != 0 THEN  f.membercost*b.slots
+                WHEN b.memid = 0 THEN f.guestcost* b.slots
+                END AS Cost
+        FROM `Bookings` AS b
+        LEFT JOIN `Facilities` AS f
+        ON b.facid = f.facid
+        LEFT JOIN `Members` AS m
+        ON b.memid = m.memid
+        WHERE DATE(`starttime`) =  "2012-09-14" ) sub
+
+HAVING Cost > 30
+ORDER BY Cost DESC 
 
 /* PART 2: SQLite
 
@@ -132,11 +147,56 @@ QUESTIONS:
 The output of facility name and total revenue, sorted by revenue. Remember
 that there's a different cost for guests and members! */
 
+SELECT sub.name, SUM(sub.cost) AS revenue
+FROM (
+        SELECT f.name,
+            CASE WHEN b.memid != 0 THEN  f.membercost*b.slots
+                WHEN b.memid = 0 THEN f.guestcost* b.slots
+                END AS Cost
+        FROM `Bookings` AS b
+        LEFT JOIN `Facilities` AS f
+        ON b.facid = f.facid
+        LEFT JOIN `Members` AS m
+        ON b.memid = m.memid
+         ) sub
+
+GROUP BY sub.name
+HAVING revenue < 1000 
+ORDER BY revenue DESC 
+
 /* Q11: Produce a report of members and who recommended them in alphabetic surname,firstname order */
+
+SELECT concat_ws( ", ", m1.surname, m2.firstname) AS Member, concat_ws(", ", m2.surname, m2.firstname) AS Recommender
+FROM Members AS m1 
+Left Join Members AS m2 
+ON m1.recommendedby = m2.memid 
+WHERE m1.recommendedby != 0
+ORDER BY Member 
+   
+Answer on separate jupyter notebook looks different as the concat function wasn't readily available through SQLite.
 
 
 /* Q12: Find the facilities with their usage by member, but not guests */
 
+SELECT f.name, SUM(b.slots)
+FROM Bookings AS b
+LEFT JOIN Facilities AS f 
+ON b.facid = f.facid
+LEFT JOIN Members AS m 
+ON b.memid = m.memid
+WHERE b.memid != 0 
+GROUP BY f.name
+
 
 /* Q13: Find the facilities usage by month, but not guests */
+
+SELECT f.name, SUM(b.slots)
+FROM Bookings AS b
+LEFT JOIN Facilities AS f 
+ON b.facid = f.facid
+LEFT JOIN Members AS m 
+ON b.memid = m.memid
+WHERE b.memid != 0 AND MONTH(`starttime`) =  "07"
+GROUP BY f.name
+
 
