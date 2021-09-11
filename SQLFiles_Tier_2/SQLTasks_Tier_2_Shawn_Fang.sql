@@ -190,13 +190,15 @@ GROUP BY f.name
 
 /* Q13: Find the facilities usage by month, but not guests */
 
-SELECT f.name, SUM(b.slots)
-FROM Bookings AS b
-LEFT JOIN Facilities AS f 
-ON b.facid = f.facid
-LEFT JOIN Members AS m 
-ON b.memid = m.memid
-WHERE b.memid != 0 AND MONTH(`starttime`) =  "07"
-GROUP BY f.name
+SELECT f.name, SUM(b.slots), strftime("%m", b.starttime) AS Month 
+FROM Bookings AS b 
+LEFT JOIN Facilities AS f  
+ON b.facid = f.facid 
+LEFT JOIN Members AS m  
+ON b.memid = m.memid 
+WHERE b.memid != 0 AND Month = "08" 
+GROUP BY f.name' 
+
+
 
 
